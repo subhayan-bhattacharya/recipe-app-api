@@ -1,5 +1,3 @@
-#!/bin/bash
-
 pytest;
 err=$? ;
 if (( $err != 5 )) ;
