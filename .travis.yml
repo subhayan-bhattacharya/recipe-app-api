@@ -8,4 +8,5 @@ services:
 before_script: pip install docker-compose
 
 script:
-  - docker-compose run app sh -c "pytest && flake8"
+  - docker-compose run app sh -c "pytest"
+  - docker-compose run app sh -c "flake8"
