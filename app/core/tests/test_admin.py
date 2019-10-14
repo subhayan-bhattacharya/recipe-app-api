@@ -41,6 +41,5 @@ def test_create_user_page(client, setup_users):
     """Test that create user page works"""
     _, _ = setup_users
     url = reverse('admin:core_user_add')
-    print(url)
     res = client.get(url)
     assert str(res.status_code) == "200"
