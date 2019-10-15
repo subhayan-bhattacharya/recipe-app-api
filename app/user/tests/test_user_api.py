@@ -38,6 +38,7 @@ def test_create_valid_user_success(setup_client):
 @pytest.mark.django_db
 def test_user_exists(setup_client):
     """Test creating user that already exists fails"""
+    client = setup_client
     payload = {
         'email': 'test@gmail.com',
         'password': 'testpass',
@@ -51,6 +52,7 @@ def test_user_exists(setup_client):
 @pytest.mark.django_db
 def test_password_is_to_short(setup_client):
     """Test that password must be more than 5 characters"""
+    client = setup_client
     payload = {
         'email': 'test@gmail.com',
         'password': 'pw',
@@ -58,5 +60,5 @@ def test_password_is_to_short(setup_client):
     }
     res = client.post(CREATE_USER_URL, payload)
     assert res.status_code == status.HTTP_400_BAD_REQUEST
-    user_exists = get_user_model.objects.get(email=payload['email']).exists()
+    user_exists = get_user_model().objects.get(email=payload['email']).exists()
     assert not user_exists
