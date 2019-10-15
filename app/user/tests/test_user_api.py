@@ -6,6 +6,7 @@ import pytest
 
 CREATE_USER_URL = reverse('user:create')
 TOKEN_URL = reverse("user:token")
+ME_URL = reverse("user:me")
 
 
 def create_user(**params):
@@ -18,6 +19,18 @@ def create_user(**params):
 def setup_client():
     client = APIClient()
     return client
+
+
+@pytest.fixture()
+def setup_user(setup_client):
+    client = setup_client
+    user = create_user(
+        email="test@gmail.com",
+        password="testpass",
+        name="test"
+    )
+    client.force_authenticate(user=user)
+    return user
 
 
 @pytest.mark.django_db
@@ -118,3 +131,46 @@ def test_create_token_missing_field(setup_client):
     res = client.post(TOKEN_URL, {"email": "test@gmail.com"})
     assert "token" not in res.data
     assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.django_db
+def test_retrieve_users_unauthorized(setup_client):
+    """Test authentication is required for user"""
+    client = setup_client
+    res = client.get(ME_URL)
+    assert res.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
+def test_retrieve_profile_success(setup_client, setup_user):
+    """Test retrieving profile for logged in user"""
+    client = setup_client
+    user = setup_user
+    res = client.get(ME_URL)
+    assert res.status_code == status.HTTP_200_OK
+    assert res.data == {'name': user.name, 'email': user.email}
+
+
+@pytest.mark.django_db
+def test_post_me_not_allowed(setup_client, setup_user):
+    """Test that post request is not allowed"""
+    client = setup_client
+    res = client.post(ME_URL, {})
+    assert res.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+
+@pytest.mark.django_db
+def test_update_user_profile(setup_client, setup_user):
+    """Test update user profile for authenticated user"""
+    client = setup_client
+    user = setup_user
+    payload = {
+        "name": "New name",
+        "password": "New password"
+    }
+    res = client.patch(ME_URL, payload)
+    user.refresh_from_db()
+    assert res.status_code == status.HTTP_200_OK
+    assert user.name == payload["name"]
+    assert user.check_password(payload["password"])
+    assert res.status_code == status.HTTP_200_OK
