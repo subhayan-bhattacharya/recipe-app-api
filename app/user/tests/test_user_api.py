@@ -5,6 +5,7 @@ from rest_framework import status
 import pytest
 
 CREATE_USER_URL = reverse('user:create')
+TOKEN_URL = reverse("user:token")
 
 
 def create_user(**params):
@@ -60,5 +61,60 @@ def test_password_is_to_short(setup_client):
     }
     res = client.post(CREATE_USER_URL, payload)
     assert res.status_code == status.HTTP_400_BAD_REQUEST
-    user_exists = get_user_model().objects.get(email=payload['email']).exists()
+    user_exists = get_user_model().objects.filter(
+        email=payload['email']).exists()
     assert not user_exists
+
+
+@pytest.mark.django_db
+def test_create_token_for_user(setup_client):
+    """Test that a user token is successfully created"""
+    client = setup_client
+    payload = {
+        'email': 'test@gmail.com',
+        'password': 'testpass',
+    }
+    create_user(**payload)
+    res = client.post(TOKEN_URL, payload)
+    assert "token" in res.data
+    assert res.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.django_db
+def test_create_token_invalid_credentials(setup_client):
+    """
+    Test that a user when supplies invalid credentials
+    token is not created
+    """
+    client = setup_client
+    payload = {
+        'email': 'test@gmail.com',
+        'password': 'testpass',
+    }
+    create_user(**payload)
+    payload["password"] = "Something else"
+    res = client.post(TOKEN_URL, payload)
+    assert "token" not in res.data
+    assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.django_db
+def test_create_token_no_user(setup_client):
+    """Test that token is not created when there is no user"""
+    client = setup_client
+    payload = {
+        'email': 'test@gmail.com',
+        'password': 'testpass',
+    }
+    res = client.post(TOKEN_URL, payload)
+    assert "token" not in res.data
+    assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.django_db
+def test_create_token_missing_field(setup_client):
+    """Test token is not created when the password is missing"""
+    client = setup_client
+    res = client.post(TOKEN_URL, {"email": "test@gmail.com"})
+    assert "token" not in res.data
+    assert res.status_code == status.HTTP_400_BAD_REQUEST
